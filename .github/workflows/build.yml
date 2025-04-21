@@ -1,0 +1,62 @@
+name: Build VS Code Extension
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Añadir permisos explícitos para contenido y escritura
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm ci
+
+    # Instala la herramienta de publicación más reciente (@vscode/vsce)
+    - name: Install vsce
+      run: npm install -g @vscode/vsce
+
+    # Obtener la versión desde package.json
+    - name: Get Version
+      id: version
+      run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+    # Empaqueta la extensión (crea el archivo .vsix)
+    - name: Package Extension
+      run: vsce package
+
+    # Obtiene el nombre del archivo .vsix generado
+    - name: Get VSIX name
+      id: vsix-name
+      run: echo "vsix=$(ls *.vsix)" >> $GITHUB_OUTPUT
+
+    # Sube el archivo .vsix como artefacto de Actions (permanece disponible durante 90 días)
+    - name: Upload VSIX Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vscode-extension-vsix
+        path: '*.vsix'
+        
+    # Crea una Release en GitHub
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: Release v${{ steps.version.outputs.version }}
+        files: ${{ steps.vsix-name.outputs.vsix }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        token: ${{ github.token }} 

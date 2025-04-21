@@ -1,0 +1,6 @@
+node_modules/
+.vscode/**
+*.vsix
+tsconfig.json
+npm-shrinkwrap.json
+yarn.lock
